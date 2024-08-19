@@ -1,0 +1,37 @@
+{
+    "cidade": {
+        "nome": "Campinas",
+        "uf": "SP",
+        "atualizacao": "2024-07-03",
+        "previsao": [
+            {
+                "dia": "2024-07-04",
+                "tempo": "pn",
+                "maxima": "28",
+                "minima": "16",
+                "iuv": "5.0"
+            },
+            {
+                "dia": "2024-07-05",
+                "tempo": "pn",
+                "maxima": "28",
+                "minima": "15",
+                "iuv": "5.0"
+            },
+            {
+                "dia": "2024-07-06",
+                "tempo": "pn",
+                "maxima": "28",
+                "minima": "14",
+                "iuv": "5.0"
+            },
+            {
+                "dia": "2024-07-07",
+                "tempo": "pn",
+                "maxima": "29",
+                "minima": "14",
+                "iuv": "5.0"
+            }
+        ]
+    }
+}
