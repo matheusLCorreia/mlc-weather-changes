@@ -20,7 +20,7 @@ def extractCityByCoordGoogle(lat, lon):
     
     res = req.get(url)
     data = res.json()
-    
+    print(data, res.status_code)
     location = data['results'][0]['address_components']
     city = ''
     state = ''

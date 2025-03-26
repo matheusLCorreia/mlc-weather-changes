@@ -19,31 +19,31 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
     dagrun_timeout=datetime.timedelta(minutes=60),
 )
 def EtlGovWeather():
-    
+
     @task
     def extractDataFiles():
-        year = '2022'
+        year = '2021'
         base_path = f'/opt/data_files/gov_weather_data_hist/{year}'
         files = os.listdir(base_path)
-        
+
         postgres_hook = PostgresHook(postgres_conn_id="weather_pg_conn")
         conn = postgres_hook.get_conn()
         cur = conn.cursor()
         cur.execute(f"""DELETE from tbl_clima_hist where extract(year from "data") = cast({year} as integer);""")
         conn.commit()
-        
+
         data = {'data': list(), 'year': year}
         for file in files[:]:
             string_match = re.search('INMET_(.*)_(.*)_(.*)_(.*)_(.*)_.*_(.*).CSV', file)
-            
+
             city = string_match.group(4)
             print(f"{city}, {string_match.group(5)}, {string_match.group(6)}")
             print(f"=> {file}")
-            
+
             data['data'] = transformDataFromCSV(f"{base_path}/{file}")
-            
+
             print("DATA SIZE: ", len(data['data']))
-            
+
             loadDataDB(data)
             # break
         return 1
@@ -56,31 +56,32 @@ def EtlGovWeather():
             print("Failed to open history csv.")
             print(error)
             exit(1)
-            
+
         try:
             info = raw[:8]
             lat = float(info[4].replace('LATITUDE:;', '').replace(',', '.'))
             lon = float(info[5].replace('LONGITUDE:;', '').replace(',', '.'))
             estacao = info[2].replace('ESTACAO:;', '')
-            
+
             all_data = raw[9:]
             data_formatted = []
             print("aqui 1")
             city = h.extractCityByCoordGoogle(lat, lon)
+            print(city)
             city = unidecode.unidecode(city[0]).replace("'", "")
-        
+
         except Exception as error:
             print("Failed to format data to create dict. ")
             print(error)
             exit(2)
-            
-        try:    
+
+        try:
             postgres_hook = PostgresHook(postgres_conn_id="weather_pg_conn")
             conn = postgres_hook.get_conn()
             cur = conn.cursor()
             cur.execute(f"select id_ibge from tbl_municipios where nome ilike ('%{city}%');")
             data = cur.fetchall()
-            
+
             city_id = 0
             if len(data) > 0 and len(data[0]) > 0:
                 city_id = data[0][0]
@@ -88,7 +89,7 @@ def EtlGovWeather():
             print("Getting city id.")
             print(error)
             exit(3)
-        
+
         for row in all_data:
             row = row.split(';')
             if len(row) < 2:
@@ -119,7 +120,7 @@ def EtlGovWeather():
                 print(error, row)
                 exit(3)
         return data_formatted
-    
+
     # @task
     def loadDataDB(data):
         postgres_hook = PostgresHook(postgres_conn_id="weather_pg_conn")
@@ -129,10 +130,10 @@ def EtlGovWeather():
         try:
             query = """INSERT INTO public.tbl_clima_hist
             (municipio_id, estacao, "data", hora, latitude, longitude, precipitacao_total, pressao_atm_estacao, pressao_atm_max_lasthour, pressao_atm_min_lasthour, radicao_global, temp_ar, temp_ponto_orvalho, temp_max_lasthour, temp_min_lasthour, temp_orvalho_max_lasthour, temp_orvalho_min_lasthour, umid_rel_max_lasthour, umid_rel_min_lasthour, umid_rel_ar, vento_direcao, vento_rajada_max, vento_velocidade, created_at) VALUES """
-            
+
             for row in data['data']:
                 query = query + f"({row['municipio_id']}, '{row['estacao']}', '{row['data']}', '{row['hora']}', {row['latitude']}, {row['longitude']}, {row['precipitacao_total']}, {row['pressao_atm_estacao']}, {row['pressao_atm_max_lasthour']}, {row['pressao_atm_min_lasthour']}, {row['radicao_global']}, {row['temp_ar']}, {row['temp_ponto_orvalho']}, {row['temp_max_lasthour']}, {row['temp_min_lasthour']}, {row['temp_orvalho_max_lasthour']}, {row['temp_orvalho_min_lasthour']}, {row['umid_rel_max_lasthour']}, {row['umid_rel_min_lasthour']}, {row['umid_rel_ar']}, {row['vento_direcao']}, {row['vento_rajada_max']}, {row['vento_velocidade']}, current_timestamp),"
-                
+
             # cur.execute(f"""DELETE from tbl_clima_hist where extract(year from "data") = cast({data['year']} as integer);""")
             print(query)
             cur.execute(query[:len(query)-1])
@@ -140,7 +141,7 @@ def EtlGovWeather():
         except Exception as error:
             print(error)
             exit(3)
-    
+
     extractDataFiles()
     # loadDataDB(data)
 
